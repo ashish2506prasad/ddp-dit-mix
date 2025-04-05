@@ -27,9 +27,11 @@ import argparse
 import logging
 import os
 
-from models import DiT_models
+from dit_models import DiT_models
+from dit_wavemix_models import DiT_WaveMix_models
 from diffusion import create_diffusion
 from diffusers.models import AutoencoderKL
+import json
 
 
 #################################################################################
@@ -139,10 +141,19 @@ def main(args):
     # Create model:
     assert args.image_size % 8 == 0, "Image size must be divisible by 8 (for the VAE encoder)."
     latent_size = args.image_size // 8
-    model = DiT_models[args.model](
-        input_size=latent_size,
-        num_classes=args.num_classes
-    )
+    try:
+        model = DiT_models[args.model](
+            input_size=latent_size,
+            num_classes=args.num_classes
+        )
+    except:
+        try:
+            model = DiT_WaveMix_models[args.model](
+                input_size=latent_size,
+                num_classes=args.num_classes
+            )
+        except:
+            raise ValueError(f"Unknown model: {args.model}.")
     # Note that parameter initialization is done within the DiT constructor
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
     requires_grad(ema, False)
@@ -247,6 +258,12 @@ def main(args):
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
                 dist.barrier()
 
+    # save the list in a json file
+    with open(f"loss.json", "w") as f:
+        json.dump(loss_list, f)
+    with open(f"time.json", "w") as f:
+        json.dump(time_list, f)
+
     model.eval()  # important! This disables randomized embedding dropout
     # do any sampling/FID calculation/etc. with ema (or model) in eval mode ...
 
@@ -259,7 +276,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-path", type=str, required=True)
     parser.add_argument("--results-dir", type=str, default="results")
-    parser.add_argument("--model", type=str, choices=list(DiT_models.keys()), default="DiT-XL/2")
+    parser.add_argument("--model", type=str, choices=list(DiT_models.keys()) + list(DiT_WaveMix_models.keys()), default="DiT-XL/2")
     parser.add_argument("--image-size", type=int, choices=[256, 512], default=256)
     parser.add_argument("--num-classes", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=1400)
