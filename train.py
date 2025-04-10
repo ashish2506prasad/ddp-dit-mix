@@ -11,15 +11,15 @@ A minimal training script for DiT using PyTorch DDP.
 ########################################################################################
 
 # Monkey-patch JAX's config if needed.
-import jax
+# import jax
 
-if not hasattr(jax.config, 'define_bool_state'):
-    # Define a dummy function to bypass the missing API.
-    def define_bool_state(name, default, help_msg):
-        # This stub simply returns the default without storing the state.
-        return default
-    jax.config.define_bool_state = define_bool_state
-    print("Monkey patched jax.config.define_bool_state")
+# if not hasattr(jax.config, 'define_bool_state'):
+#     # Define a dummy function to bypass the missing API.
+#     def define_bool_state(name, default, help_msg):
+#         # This stub simply returns the default without storing the state.
+#         return default
+#     jax.config.define_bool_state = define_bool_state
+#     print("Monkey patched jax.config.define_bool_state")
 ########################################################################################
 
 import torch
