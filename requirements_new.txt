@@ -5,7 +5,7 @@ fsspec==2025.3.2
 huggingface-hub==0.30.2
 importlib_metadata==8.6.1
 mkl-service==2.4.0
-nump==2.0.1
+numpy==2.0.1
 psutil==7.0.0
 PyWavelets==1.8.0
 regex==2024.11.6
