@@ -1,0 +1,41 @@
+accelerate==1.6.0
+Brotli @ file:///croot/brotli-split_1736182456865/work
+certifi @ file:///croot/certifi_1738623731865/work/certifi
+charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
+diffusers==0.33.1
+einops==0.8.1
+filelock @ file:///croot/filelock_1744281381737/work
+fsspec==2025.3.2
+gmpy2 @ file:///croot/gmpy2_1738085463648/work
+huggingface-hub==0.30.2
+idna @ file:///croot/idna_1714398848350/work
+importlib_metadata==8.6.1
+Jinja2 @ file:///croot/jinja2_1741710844255/work
+MarkupSafe @ file:///croot/markupsafe_1738584038848/work
+mkl-service==2.4.0
+mkl_fft @ file:///io/mkl313/mkl_fft_1730824109137/work
+mkl_random @ file:///io/mkl313/mkl_random_1730823916628/work
+mpmath @ file:///work/perseverance-python-buildout/croot/mpmath_1698864994882/work
+networkx @ file:///croot/networkx_1737039604450/work
+numpy @ file:///croot/numpy_and_numpy_base_1725470312869/work/dist/numpy-2.0.1-cp312-cp312-linux_x86_64.whl#sha256=e2374991344fa2241a2153ef3d550d3a1cd2d50cb1f1d51eddc82870abc88021
+packaging==24.2
+pillow @ file:///croot/pillow_1738010226202/work
+psutil==7.0.0
+PySocks @ file:///work/perseverance-python-buildout/croot/pysocks_1698845478203/work
+PyWavelets==1.8.0
+PyYAML @ file:///croot/pyyaml_1728657952215/work
+regex==2024.11.6
+requests @ file:///croot/requests_1730999120400/work
+safetensors==0.5.3
+setuptools==75.8.0
+sympy==1.13.1
+timm==1.0.15
+torch==2.5.1
+torchaudio==2.5.1
+torchvision==0.20.1
+tqdm==4.67.1
+triton==3.1.0
+typing_extensions @ file:///croot/typing_extensions_1734714854207/work
+urllib3 @ file:///croot/urllib3_1737133630106/work
+wheel==0.45.1
+zipp==3.21.0
