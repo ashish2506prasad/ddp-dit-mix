@@ -290,31 +290,31 @@ class DiTWaveMix(nn.Module):
 #################################################################################
 
 def DiT_WaveMix_XL(**kwargs):
-    return DiTWaveMix(depth=28, hidden_size=256, **kwargs)
+    return DiTWaveMix(depth=32, hidden_size=1024, **kwargs)
 
 def DiT_WaveMix_L(**kwargs):
-    return DiTWaveMix(depth=24, hidden_size=128, **kwargs)
+    return DiTWaveMix(depth=28, hidden_size=512, **kwargs)
 
 def DiT_WaveMix_B(**kwargs):
-    return DiTWaveMix(depth=12, hidden_size=64, **kwargs)
+    return DiTWaveMix(depth=24, hidden_size=256, **kwargs)
 
 def DiT_WaveMix_S(**kwargs):
-    return DiTWaveMix(depth=12, hidden_size=32, **kwargs)
+    return DiTWaveMix(depth=16, hidden_size=128, **kwargs)
 
 
 
 DiT_WaveMix_models = {
-    'DiT-WaveMix-XL/2': DiT_WaveMix_XL,  
-    'DiT-WaveMix-L/2':  DiT_WaveMix_L,   
-    'DiT-WaveMix-B/2':  DiT_WaveMix_B,   
-    'DiT-WaveMix-S/2':  DiT_WaveMix_S,  
+    'DiT-WaveMix-XL': DiT_WaveMix_XL,  
+    'DiT-WaveMix-L':  DiT_WaveMix_L,   
+    'DiT-WaveMix-B':  DiT_WaveMix_B,   
+    'DiT-WaveMix-S':  DiT_WaveMix_S,  
 }
 
 if __name__ == "__main__":
     from prettytable import PrettyTable
     
     # tiny image net has 200 classes
-    model = DiT_WaveMix_XL(num_classes=200)
+    model = DiT_WaveMix_L(num_classes=20)
 
     ############### uncomment the below lines to test for a random input ###################
     # x = torch.randn(2, 4, 32, 32)
