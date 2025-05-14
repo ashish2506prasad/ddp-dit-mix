@@ -1,9 +1,7 @@
-# Written for image classification, but backbone can used for other tasks by changing the final pool layer
 import torch
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Function
-import pywt
 import torch.nn as nn
 import functools
 from math import ceil
@@ -12,12 +10,32 @@ import pywt
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
+import torch
+import torch.nn.functional as F
 
-if torch.cuda.is_available():
-    device = "cuda"
-else:
-    device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
+def mypad(x, pad, mode='symmetric'):
+    """ Pads a 4D tensor with the specified mode.
+
+    Args:
+        x (torch.Tensor): Input tensor of shape (N, C, H, W).
+        pad (tuple): Padding size (left, right, top, bottom).
+        mode (str): Padding mode. Supports 'symmetric', 'reflect', and 'periodic'.
+
+    Returns:
+        torch.Tensor: Padded tensor.
+    """
+    if mode == 'symmetric' or mode == 'reflect':
+        return F.pad(x, pad, mode='reflect')
+    elif mode == 'periodic':
+        left, right, top, bottom = pad
+        x_padded = torch.cat([x[..., -left:], x, x[..., :right]], dim=-1)  # Pad width
+        x_padded = torch.cat([x_padded[:, :, -top:, :], x_padded, x_padded[:, :, :bottom, :]], dim=-2)  # Pad height
+        return x_padded
+    else:
+        raise ValueError(f"Unsupported padding mode: {mode}")
 
 def sfb1d(lo, hi, g0, g1, mode='zero', dim=-1):
     """ 1D synthesis filter bank of an image tensor
@@ -367,13 +385,7 @@ class DWTForward(nn.Module):
 
         return ll, yh
 
-
-
 from numpy import hamming
-xf1 = DWTForward(J=1, mode='zero', wave='db1').cuda()
-xf2 = DWTForward(J=2, mode='zero', wave='db1').cuda() 
-xf3 = DWTForward(J=3, mode='zero', wave='db1').cuda()
-
 class Waveblock(nn.Module):
     def __init__(
         self,
@@ -384,74 +396,47 @@ class Waveblock(nn.Module):
         dropout = 0.5,
     ):
         super().__init__()
-        
-        self.feedforward1 = nn.Sequential(
-                nn.Conv2d(final_dim + int(final_dim/2), final_dim*mult,1),
+
+        self.feedforward = nn.Sequential(
+                nn.Conv2d(final_dim, final_dim*mult, 1),
                 nn.GELU(),
                 nn.Dropout(dropout),
                 nn.Conv2d(final_dim*mult, ff_channel, 1),
                 nn.ConvTranspose2d(ff_channel, final_dim, 4, stride=2, padding=1),
-                nn.BatchNorm2d(final_dim)         
-            )
-
-        self.feedforward2 = nn.Sequential(
-                nn.Conv2d(final_dim + int(final_dim/2), final_dim*mult,1),
-                nn.GELU(),
-                nn.Dropout(dropout),
-                nn.Conv2d(final_dim*mult, ff_channel, 1),
-                nn.ConvTranspose2d(ff_channel, int(final_dim/2), 4, stride=2, padding=1),
-                nn.BatchNorm2d(int(final_dim/2))            
-            )
-
-        self.feedforward3 = nn.Sequential(
-                nn.Conv2d(final_dim, final_dim*mult,1),
-                nn.GELU(),
-                nn.Dropout(dropout),
-                nn.Conv2d(final_dim*mult, ff_channel, 1),
-                nn.ConvTranspose2d(ff_channel, int(final_dim/2), 4, stride=2, padding=1),
-                nn.BatchNorm2d(int(final_dim/2))          
+                nn.BatchNorm2d(final_dim)
             )
 
         self.reduction = nn.Conv2d(final_dim, int(final_dim/4), 1)
-        
-        
+        # Initialize the DWT once during construction
+        self.dwt = DWTForward(J=1, mode='zero', wave='db1')
+
     def forward(self, x):
         b, c, h, w = x.shape
-        
+
         x = self.reduction(x)
-        
-        Y1, Yh = xf1(x)
-        Y2, Yh = xf2(x)
-        Y3, Yh = xf3(x)
-        
-        
-        x1 = torch.reshape(Yh[0], (b, int(c*3/4), int(h/2), int(w/2)))
-        x2 = torch.reshape(Yh[1], (b, int(c*3/4), int(h/4), int(w/4)))
-        x3 = torch.reshape(Yh[2], (b, int(c*3/4), int(h/8), int(w/8)))
-        
-        
-        x1 = torch.cat((Y1,x1), dim = 1)
-        x2 = torch.cat((Y2,x2), dim = 1)
-        x3 = torch.cat((Y3,x3), dim = 1)
-       
-        
-        x3 = self.feedforward3(x3)
-        
-        x2 = torch.cat((x2,x3), dim = 1)
+        # print("reduction shape", x.shape)
 
-        x2 = self.feedforward2(x2)
+        # Make DWT match the device of the input tensor
+        self.dwt = self.dwt.to(x.device)
 
-        x1 = torch.cat((x1,x2), dim = 1)
-        x = self.feedforward1(x1)
-        
+        Y1, Yh = self.dwt(x)
+        # print("Y1 shape", Y1)
+        # print("Yh shape", Yh.detach.cpu.numpy.shape)
+
+        x = torch.reshape(Yh[0], (b, int(c*3/4), int(h/2), int(w/2)))
+
+        x = torch.cat((Y1, x), dim=1)
+
+        x = self.feedforward(x)
+        # print("feedforward shape", x.shape)
+
         return x
 
-
-class WaveMix(nn.Module):
+class WaveMixLite(nn.Module):
     def __init__(
         self,
         *,
-        num_classes,
+        num_final_channels,
         depth,
         mult = 2,
         ff_channel = 16,
@@ -459,63 +444,58 @@ class WaveMix(nn.Module):
         dropout = 0.,
     ):
         super().__init__()
-        
+
         self.layers = nn.ModuleList([])
         for _ in range(depth):
-            self.layers.append(Waveblock(mult = mult, ff_channel = ff_channel, final_dim = final_dim, dropout = dropout))
-        
+            self.layers.append(Waveblock(mult=mult, ff_channel=ff_channel, final_dim=final_dim, dropout=dropout))
 
-        self.pool = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            Rearrange('... () () -> ...'),
-            nn.Linear(1024, num_classes)
+        self.segment = nn.Sequential(
+            nn.ConvTranspose2d(final_dim, int(final_dim/2), 4, stride=2, padding=1),
+            nn.ConvTranspose2d(int(final_dim/2), int(final_dim/4), 4, stride=2, padding=1),
+            nn.Conv2d(int(final_dim/4), num_final_channels, 1)
         )
-        
-#         Self.conv can be strided convolutions too
-#         self.conv = nn.Sequential(
-#             nn.Conv2d(3, int(final_dim/2), 3, 2, 1),
-#             nn.Conv2d(int(final_dim/2), final_dim, 3, 2, 1),
-#             )
-        
 
         self.conv = nn.Sequential(
-            nn.Conv2d(3, int(final_dim/4),3, 1, 1),
-            nn.Conv2d(int(final_dim/4), int(final_dim/2), 3, 1, 1),
-            nn.Conv2d(int(final_dim/2), final_dim, 4, 4),
-            nn.GELU(),
-            nn.BatchNorm2d(final_dim)
-            )
-
-        self.final = nn.Conv2d(final_dim, 1024, 1, 1)  # The final embedding to be choosen based on number of classes
-
-      
+            nn.Conv2d(4, int(final_dim/2), 3, 2, 1),
+            nn.Conv2d(int(final_dim/2), final_dim, 3, 2, 1)
+        )
 
     def forward(self, img):
-        x = self.conv(img)   
-            
+        x = self.conv(img)
+        # print("self.conv shape", x.shape)
+
         for attn in self.layers:
             x = attn(x) + x
 
-        x = self.final(x)
+        # print('attn shape', x.shape)
 
-        out = self.pool(x)
+        out = self.segment(x)
 
         return out
 
 
 
-model = WaveMix(
-    num_classes = 200,
-    depth = 12,
-    mult = 2,
-    ff_channel = 240,
-    final_dim = 240,
-    dropout = 0.5
-)
 
-model.to(device)
+################################################################################
+                      # Example usage of the WaveMixLite class
+################################################################################
 
-x = torch.rand(10, 3, 32, 32, device=device)
-# x = x.to(device)
-out = model(x)
-print(out.shape)
+if __name__ == "__main__":
+    def test_wavemix():
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = WaveMixLite(
+            num_final_channels=8,
+            depth=2,
+            mult=2,
+            ff_channel=50,
+            final_dim=200,
+            dropout=0.5
+        ).to(device)
+
+        x = torch.randn(1, 4, 32, 32).to(device)
+
+        out = model(x)
+        print(f"Output shape: {out.shape}")
+        return out
+
+    out = test_wavemix()

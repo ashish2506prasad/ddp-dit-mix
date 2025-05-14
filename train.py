@@ -43,7 +43,7 @@ import logging
 import os
 
 from dit_models import DiT_models
-from dit_wavemix_models import DiT_WaveMix_models
+from dit_wavemixlite_models import DiT_WaveMix_models
 from diffusion import create_diffusion
 from diffusers.models import AutoencoderKL
 import json
