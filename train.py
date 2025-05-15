@@ -147,7 +147,7 @@ def main(args):
         os.makedirs(args.results_dir, exist_ok=True)  # Make results folder (holds all experiment subfolders)
         experiment_index = len(glob(f"{args.results_dir}/*"))
         model_string_name = args.model.replace("/", "-")  # e.g., DiT-XL/2 --> DiT-XL-2 (for naming folders)
-        experiment_dir = f"{args.results_dir}/{experiment_index:03d}-{model_string_name}"  # Create an experiment folder
+        experiment_dir = f"{args.results_dir}/{experiment_index:03d}-{model_string_name}-{args.token_mixer}"   # Create an experiment folder
         checkpoint_dir = f"{experiment_dir}/checkpoints"  # Stores saved model checkpoints
         os.makedirs(checkpoint_dir, exist_ok=True)
         logger = create_logger(experiment_dir)
@@ -162,7 +162,8 @@ def main(args):
     try:
         model = DiT_models[args.model](
             input_size=latent_size,
-            num_classes=args.num_classes
+            num_classes=args.num_classes,
+            token_mixer=args.token_mixer,
         )
     except:
         try:
@@ -310,5 +311,6 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--log-every", type=int, default=100)
     parser.add_argument("--ckpt-every", type=int, default=50_000)
+    parser.add_argument("--token-mixer", type=str, default="linformer", choices=["linformer", "nystromformer", "performer", "softmax"])
     args = parser.parse_args()
     main(args)
