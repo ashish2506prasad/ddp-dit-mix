@@ -14,9 +14,9 @@ import torch.nn as nn
 import numpy as np
 import math
 from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
-from attention_modules.linformer import Linformer
-from attention_modules.nystromfrmer import Nystromformer
-from attention_modules.performer import Performer
+from attention_modules.linformer import LinformerSelfAttention
+from attention_modules.nystromfrmer import NystromAttention
+from attention_modules.performer import PerformerSelfAttention
 
 
 def modulate(x, shift, scale):
@@ -111,11 +111,14 @@ class DiTBlock(nn.Module):
         if token_mixer == 'softmax':
             self.attn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True, **block_kwargs)
         elif token_mixer == 'linformer':
-            self.attn = Linformer(dim=hidden_size, depth=1, heads= num_heads, dim_head=hidden_size//num_heads, mlp_dim=hidden_size*mlp_ratio, one_kv_head=False, share_kv=False, k=1000 ,seq_len=num_patches, **block_kwargs)
+            # self.attn = Linf(dim=hidden_size, depth=1, heads= num_heads, dim_head=hidden_size//num_heads, mlp_dim=hidden_size*mlp_ratio, one_kv_head=False, share_kv=False, k=1000 ,seq_len=num_patches, **block_kwargs)
+            self.attn = LinformerSelfAttention(dim=hidden_size, seq_len=num_patches, heads=num_heads, one_kv_head=False, share_kv=False, **block_kwargs)
         elif token_mixer == 'nystromformer':
-            self.attn = Nystromformer(dim=hidden_size, depth=1, heads=num_heads, **block_kwargs)
+            # self.attn = Nystromformer(dim=hidden_size, depth=1, heads=num_heads, **block_kwargs)
+            self.attn = NystromAttention(dim=hidden_size, heads=num_heads, num_landmarks=256, pinv_iterations=6, residual=True, residual_conv_kernel=33, eps=1e-8, dropout=0.0)
         elif token_mixer == 'performer':
-            self.attn = Performer(dim=hidden_size, depth=1, heads=num_heads, mlp_dim=hidden_size*mlp_ratio, dim_head=64,**block_kwargs)
+            # self.attn = Performer(dim=hidden_size, depth=1, heads=num_heads, mlp_dim=int(hidden_size*mlp_ratio), dim_head=64,**block_kwargs)
+            self.attn = PerformerSelfAttention(dim=hidden_size, heads=num_heads, dim_head=64, **block_kwargs)
         else:
             raise ValueError(f"Unknown token mixer: {token_mixer}")
 
@@ -168,6 +171,7 @@ class DiT(nn.Module):
         depth=28,
         num_heads=16,
         mlp_ratio=4.0,
+        token_mixer='performer',
         class_dropout_prob=0.1,
         num_classes=1000,
         learn_sigma=True,
@@ -187,7 +191,7 @@ class DiT(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, hidden_size), requires_grad=False)
 
         self.blocks = nn.ModuleList([
-            DiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio, num_patches=num_patches) for _ in range(depth)
+            DiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio, num_patches=num_patches, token_mixer=token_mixer) for _ in range(depth)
         ])
         self.final_layer = FinalLayer(hidden_size, patch_size, self.out_channels)
         self.initialize_weights()
@@ -386,14 +390,15 @@ if __name__ == "__main__":
     from prettytable import PrettyTable
     
     # tiny image net has 200 classes
-    model = DiT_S_8(num_classes=200)
+    model = DiT_B_2(num_classes=20,
+                    token_mixer='softmax')
 
     ############### uncomment the below lines to test for a random input ###################
-    x = torch.randn(2, 4, 32, 32)
-    t = torch.randint(0, 1000, (2,))
-    y = torch.randint(0, 200, (2,))
-    out = model(x, t, y)
-    print(out.shape)
+    # x = torch.randn(2, 4, 32, 32)
+    # t = torch.randint(0, 1000, (2,))
+    # y = torch.randint(0, 200, (2,))
+    # out = model(x, t, y)
+    # print(out.shape)
 
     def count_parameters(model):
         table = PrettyTable(["Modules", "Parameters"])
@@ -404,10 +409,46 @@ if __name__ == "__main__":
             params = parameter.numel()
             table.add_row([name, params])
             total_params += params
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
+        # print(table)
+        print(f"Total Trainable Params: {total_params/1e6}M")
         return total_params
-        
-    count_parameters(model)
+    
+
+    token_mixer_list = ['softmax', 'nystromformer', 'performer', 'linformer']
+    print("dit b/2")
+    for token_mixer in token_mixer_list:
+        model = DiT_B_2(num_classes=20,
+                        token_mixer=token_mixer)
+        print(f"Token Mixer: {token_mixer}")
+        count_parameters(model)
+    print("\n")
+    print("dit L/2")
+    for token_mixer in token_mixer_list:
+        model = DiT_L_2(num_classes=20,
+                        token_mixer=token_mixer)
+        print(f"Token Mixer: {token_mixer}")
+        count_parameters(model)
+    print("\n")
+    print("dit XL/2")
+    for token_mixer in token_mixer_list:
+        model = DiT_XL_8(num_classes=20,
+                        token_mixer=token_mixer)
+        print(f"Token Mixer: {token_mixer}")
+        count_parameters(model)
+    print("\n")
+    print("dit XL/4")
+    for token_mixer in token_mixer_list:
+        model = DiT_XL_4(num_classes=20,
+                        token_mixer=token_mixer)
+        print(f"Token Mixer: {token_mixer}")
+        count_parameters(model)
+    print("\n")
+    print("dit XL/2")
+    for token_mixer in token_mixer_list:
+        model = DiT_XL_2(num_classes=20,
+                        token_mixer=token_mixer)
+        print(f"Token Mixer: {token_mixer}")
+        count_parameters(model)
+    
 
 

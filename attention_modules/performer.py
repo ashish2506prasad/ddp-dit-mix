@@ -290,7 +290,7 @@ class Attention(nn.Module):
         return out
 
 
-class SelfAttention(Attention):
+class PerformerSelfAttention(Attention):
     def forward(self, *args, context = None, **kwargs):
         assert not exists(context), 'self attention should not receive context'
 #         print(1, "self attention module")
@@ -342,7 +342,7 @@ class Performer(nn.Module):
         attn_out_bias = True
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, SelfAttention(dim, causal = causal, heads = heads, dim_head = dim_head, local_heads = local_attn_heads, local_window_size = local_window_size, nb_features = nb_features, generalized_attention = generalized_attention, kernel_fn = kernel_fn, dropout = attn_dropout, no_projection = no_projection, qkv_bias = qkv_bias, attn_out_bias = attn_out_bias)),
+                PreNorm(dim, PerformerSelfAttention(dim, causal = causal, heads = heads, dim_head = dim_head, local_heads = local_attn_heads, local_window_size = local_window_size, nb_features = nb_features, generalized_attention = generalized_attention, kernel_fn = kernel_fn, dropout = attn_dropout, no_projection = no_projection, qkv_bias = qkv_bias, attn_out_bias = attn_out_bias)),
                 PreNorm(dim, FeedForward(dim, mlp_dim, dropout = dropout))
             ]))
     def forward(self, x):
