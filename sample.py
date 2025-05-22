@@ -62,7 +62,8 @@ def main(args):
 
     # Sample images:
     samples = diffusion.p_sample_loop(
-        model.forward_with_cfg, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True, device=device
+        model.forward_with_cfg, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True, device=device,
+        save_timestep_output=args.save_timestep_images
     )
     samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
     samples = vae.decode(samples / 0.18215).sample
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Optional path to a DiT checkpoint (default: auto-download a pre-trained DiT-XL/2 model).")
-    parser.add_argument("--save_timestep_images",type=bool, default=False)
+    parser.add_argument("--save-timestep-images",type=bool, default=False)
     parser.add_argument("--class_labels", type=int, default=None)
     args = parser.parse_args()
     main(args)
