@@ -522,8 +522,8 @@ class GaussianDiffusion:
                     save_timestep_output_list.append(
                         {
                             "timestep": i,
-                            "sample": out["sample"].cpu().numpy(),
-                            "pred_xstart": out["pred_xstart"].cpu().numpy()
+                            "sample": out["sample"].cpu().numpy().tolist(),
+                            "pred_xstart": out["pred_xstart"].cpu().numpy().tolist(),
                         }
                     )
                 img = out["sample"]
