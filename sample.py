@@ -46,7 +46,8 @@ def main(args):
     vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-{args.vae}").to(device)
 
     # Labels to condition the model with (feel free to change):
-    class_labels = [207, 360, 387, 974, 88, 979, 417, 279]
+    # class_labels = [207, 360, 387, 974, 88, 979, 417, 279]
+    class_labels = [args.class_labels]
 
     # Create sampling noise:
     n = len(class_labels)
@@ -93,5 +94,6 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Optional path to a DiT checkpoint (default: auto-download a pre-trained DiT-XL/2 model).")
     parser.add_argument("--save_timestep_images", type=bool, action="store_true",help="Save intermediate images at each timestep (default: False).", default=False)
+    parser.add_argument("--class_labels", type=int, default=None)
     args = parser.parse_args()
     main(args)
