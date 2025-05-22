@@ -70,7 +70,7 @@ def main(args):
     samples = vae.decode(samples / 0.18215).sample
 
     # Save and display images:
-    save_image(samples, "sample.png", nrow=4, normalize=True, value_range=(-1, 1))
+    save_image(samples, f"sample_{args.class_labels}.png", nrow=4, normalize=True, value_range=(-1, 1))
 
     # if args.save_timestep_images:
     #     with open("debug_outputs/timestep_output.json", "w") as f:
