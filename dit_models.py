@@ -17,6 +17,7 @@ from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
 from attention_modules.linformer import LinformerSelfAttention
 from attention_modules.nystromfrmer import NystromAttention
 from attention_modules.performer import PerformerSelfAttention
+from torchinfo import summary
 
 
 def modulate(x, shift, scale):
@@ -115,7 +116,7 @@ class DiTBlock(nn.Module):
             self.attn = LinformerSelfAttention(dim=hidden_size, seq_len=num_patches, heads=num_heads, one_kv_head=False, share_kv=False, **block_kwargs)
         elif token_mixer == 'nystromformer':
             # self.attn = Nystromformer(dim=hidden_size, depth=1, heads=num_heads, **block_kwargs)
-            self.attn = NystromAttention(dim=hidden_size, heads=num_heads, num_landmarks=256, pinv_iterations=6, residual=True, residual_conv_kernel=33, eps=1e-8, dropout=0.0)
+            self.attn = NystromAttention(dim=hidden_size, dim_head=64, heads=num_heads, num_landmarks=256, pinv_iterations=6, residual=True, residual_conv_kernel=33, eps=1e-8, dropout=0.0)
         elif token_mixer == 'performer':
             # self.attn = Performer(dim=hidden_size, depth=1, heads=num_heads, mlp_dim=int(hidden_size*mlp_ratio), dim_head=64,**block_kwargs)
             self.attn = PerformerSelfAttention(dim=hidden_size, heads=num_heads, dim_head=64, **block_kwargs)
@@ -339,7 +340,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
 
 
 #################################################################################
-#                                   DiT Configs                                  #
+#                                   DiT Configs                                 #
 #################################################################################
 
 def DiT_XL_2(**kwargs):
@@ -390,65 +391,71 @@ if __name__ == "__main__":
     from prettytable import PrettyTable
     
     # tiny image net has 200 classes
-    model = DiT_B_2(num_classes=20,
+    model = DiT_B_2(num_classes=200,
                     token_mixer='softmax')
 
     ############### uncomment the below lines to test for a random input ###################
-    # x = torch.randn(2, 4, 32, 32)
-    # t = torch.randint(0, 1000, (2,))
-    # y = torch.randint(0, 200, (2,))
-    # out = model(x, t, y)
-    # print(out.shape)
+    x = torch.randn(2, 4, 32, 32)
+    t = torch.randint(0, 1000, (2,))
+    y = torch.randint(0, 200, (2,))
+    out = model(x, t, y)
+    print(out.shape)
 
-    def count_parameters(model):
-        table = PrettyTable(["Modules", "Parameters"])
-        total_params = 0
-        for name, parameter in model.named_parameters():
-            if not parameter.requires_grad:
-                continue
-            params = parameter.numel()
-            table.add_row([name, params])
-            total_params += params
-        # print(table)
-        print(f"Total Trainable Params: {total_params/1e6}M")
-        return total_params
+    summary(model, input_data=(x, t, y), batch_dim=0)
+
+
+    # def count_parameters(model):
+    #     table = PrettyTable(["Modules", "Parameters"])
+    #     total_params = 0
+    #     for name, parameter in model.named_parameters():
+    #         if not parameter.requires_grad:
+    #             continue
+    #         params = parameter.numel()
+    #         table.add_row([name, params])
+    #         total_params += params
+    #     print(table)
+    #     print(f"Total Trainable Params: {total_params/1e6}M")
+    #     return total_params
+    
+    # count_parameters(model)
+    
     
 
-    token_mixer_list = ['softmax', 'nystromformer', 'performer', 'linformer']
-    print("dit b/2")
-    for token_mixer in token_mixer_list:
-        model = DiT_B_2(num_classes=20,
-                        token_mixer=token_mixer)
-        print(f"Token Mixer: {token_mixer}")
-        count_parameters(model)
-    print("\n")
-    print("dit L/2")
-    for token_mixer in token_mixer_list:
-        model = DiT_L_2(num_classes=20,
-                        token_mixer=token_mixer)
-        print(f"Token Mixer: {token_mixer}")
-        count_parameters(model)
-    print("\n")
-    print("dit XL/2")
-    for token_mixer in token_mixer_list:
-        model = DiT_XL_8(num_classes=20,
-                        token_mixer=token_mixer)
-        print(f"Token Mixer: {token_mixer}")
-        count_parameters(model)
-    print("\n")
-    print("dit XL/4")
-    for token_mixer in token_mixer_list:
-        model = DiT_XL_4(num_classes=20,
-                        token_mixer=token_mixer)
-        print(f"Token Mixer: {token_mixer}")
-        count_parameters(model)
-    print("\n")
-    print("dit XL/2")
-    for token_mixer in token_mixer_list:
-        model = DiT_XL_2(num_classes=20,
-                        token_mixer=token_mixer)
-        print(f"Token Mixer: {token_mixer}")
-        count_parameters(model)
+    # token_mixer_list = ['softmax', 'nystromformer', 'performer', 'linformer']
+    # print("dit b/2")
+    # for token_mixer in token_mixer_list:
+    #     model = DiT_B_2(num_classes=20,
+    #                     token_mixer=token_mixer)
+    #     print(f"Token Mixer: {token_mixer}")
+    #     count_parameters(model)
+    # print("\n")
+    # print("dit L/2")
+    # for token_mixer in token_mixer_list:
+    #     model = DiT_L_2(num_classes=20,
+    #                     token_mixer=token_mixer)
+    #     print(f"Token Mixer: {token_mixer}")
+    #     count_parameters(model)
+    # print("\n")
+    # print("dit XL/2")
+    # for token_mixer in token_mixer_list:
+    #     model = DiT_XL_8(num_classes=20,
+    #                     token_mixer=token_mixer)
+    #     print(f"Token Mixer: {token_mixer}")
+    #     count_parameters(model)
+    # print("\n")
+    # print("dit XL/4")
+    # for token_mixer in token_mixer_list:
+    #     model = DiT_XL_4(num_classes=20,
+    #                     token_mixer=token_mixer)
+    #     print(f"Token Mixer: {token_mixer}")
+    #     count_parameters(model)
+    # print("\n")
+    # print("dit XL/2")
+    # for token_mixer in token_mixer_list:
+    #     model = DiT_XL_2(num_classes=20,
+    #                     token_mixer=token_mixer)
+    #     print(f"Token Mixer: {token_mixer}")
+    #     count_parameters(model)
     
 
 

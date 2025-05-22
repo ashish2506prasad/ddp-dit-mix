@@ -16,6 +16,8 @@ from diffusers.models import AutoencoderKL
 from download import find_model
 from models import DiT_models
 import argparse
+import os
+import json
 
 
 def main(args):
@@ -67,6 +69,17 @@ def main(args):
     # Save and display images:
     save_image(samples, "sample.png", nrow=4, normalize=True, value_range=(-1, 1))
 
+    if args.save_timestep_images:
+        with open("debug_outputs/timestep_output.json", "w") as f:
+            for i, sample in enumerate(samples):
+                latent_image = sample['sample']
+                latent_image = torch.tensor(latent_image).to(device)
+                samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
+                samples = vae.decode(samples / 0.18215).sample
+                os.makedirs(f"timestep_image", exist_ok=True)
+                save_image(sample['sample'], f"timestep_image/sample_timestep_{i}.png", nrow=4, normalize=True, value_range=(-1, 1))
+                f.write(f"sample_timestep_{i}.png\n")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -79,5 +92,6 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Optional path to a DiT checkpoint (default: auto-download a pre-trained DiT-XL/2 model).")
+    parser.add_argument("--save_timestep_images", type=bool, action="store_true",help="Save intermediate images at each timestep (default: False).", default=False)
     args = parser.parse_args()
     main(args)
