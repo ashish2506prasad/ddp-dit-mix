@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Optional path to a DiT checkpoint (default: auto-download a pre-trained DiT-XL/2 model).")
-    parser.add_argument("--save_timestep_images", type=bool, action="store_true",help="Save intermediate images at each timestep (default: False).", default=False)
+    parser.add_argument("--save_timestep_images",type=bool, default=False)
     parser.add_argument("--class_labels", type=int, default=None)
     args = parser.parse_args()
     main(args)
