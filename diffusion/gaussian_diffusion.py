@@ -431,6 +431,7 @@ class GaussianDiffusion:
         device=None,
         progress=False,
         save_timestep_output=False,
+        class_labels=None,
     ):
         """
         Generate samples from the model.
@@ -462,6 +463,7 @@ class GaussianDiffusion:
             device=device,
             progress=progress,
             save_timestep_output=save_timestep_output,
+            class_labels=class_labels,
         ):
             final = sample
         return final["sample"]
@@ -478,6 +480,7 @@ class GaussianDiffusion:
         device=None,
         progress=False,
         save_timestep_output=False,
+        class_labels=None,
     ):
         """
         Generate samples from the model and yield intermediate samples from
@@ -527,7 +530,7 @@ class GaussianDiffusion:
                         }
                     )
                 img = out["sample"]
-        os.makedirs("debug_outputs", exist_ok=True)
+        os.makedirs(f"debug_outputs_{class_labels}", exist_ok=True)
         if save_timestep_output:
             print("Saving timestep outputs to debug_outputs/timestep_output.json")
             print("len of save_timestep_output_list:", len(save_timestep_output_list))

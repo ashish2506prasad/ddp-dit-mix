@@ -48,7 +48,7 @@ def main(args):
     # Labels to condition the model with (feel free to change):
     
     class_labels = [args.class_labels]
-    class_labels = [207, 360, 387, 974, 88, 979, 417, 279]
+    # class_labels = [207, 360, 387, 974, 88, 979, 417, 279]
 
     # Create sampling noise:
     n = len(class_labels)
@@ -64,7 +64,7 @@ def main(args):
     # Sample images:
     samples = diffusion.p_sample_loop(
         model.forward_with_cfg, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True, device=device,
-        save_timestep_output=args.save_timestep_images
+        save_timestep_output=args.save_timestep_images, class_labels=class_labels
     )
     samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
     samples = vae.decode(samples / 0.18215).sample
