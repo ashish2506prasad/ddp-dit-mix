@@ -529,6 +529,8 @@ class GaussianDiffusion:
                 img = out["sample"]
         os.makedirs("debug_outputs", exist_ok=True)
         if save_timestep_output:
+            print("Saving timestep outputs to debug_outputs/timestep_output.json")
+            print("len of save_timestep_output_list:", len(save_timestep_output_list))
             with open("debug_outputs/timestep_output.json", "w") as f:
                 json.dump(save_timestep_output_list, f)
 

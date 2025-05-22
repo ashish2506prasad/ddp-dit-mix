@@ -70,16 +70,16 @@ def main(args):
     # Save and display images:
     save_image(samples, "sample.png", nrow=4, normalize=True, value_range=(-1, 1))
 
-    if args.save_timestep_images:
-        with open("debug_outputs/timestep_output.json", "w") as f:
-            for i, sample in enumerate(samples):
-                latent_image = sample['sample']
-                latent_image = torch.tensor(latent_image).to(device)
-                samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
-                samples = vae.decode(samples / 0.18215).sample
-                os.makedirs(f"timestep_image", exist_ok=True)
-                save_image(sample['sample'], f"timestep_image/sample_timestep_{i}.png", nrow=4, normalize=True, value_range=(-1, 1))
-                f.write(f"sample_timestep_{i}.png\n")
+    # if args.save_timestep_images:
+    #     with open("debug_outputs/timestep_output.json", "w") as f:
+    #         for i, sample in enumerate(samples):
+    #             latent_image = sample['sample']
+    #             latent_image = torch.tensor(latent_image).to(device)
+    #             samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
+    #             samples = vae.decode(samples / 0.18215).sample
+    #             os.makedirs(f"timestep_image", exist_ok=True)
+    #             save_image(sample['sample'], f"timestep_image/sample_timestep_{i}.png", nrow=4, normalize=True, value_range=(-1, 1))
+    #             f.write(f"sample_timestep_{i}.png\n")
 
 
 if __name__ == "__main__":
