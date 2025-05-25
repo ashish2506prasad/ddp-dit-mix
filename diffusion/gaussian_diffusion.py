@@ -383,7 +383,6 @@ class GaussianDiffusion:
         denoised_fn=None,
         cond_fn=None,
         model_kwargs=None,
-        save_timestep_output=False,
     ):
         """
         Sample x_{t-1} from the model at the given timestep.
@@ -431,7 +430,6 @@ class GaussianDiffusion:
         device=None,
         progress=False,
         save_timestep_output=False,
-        class_labels=None,
     ):
         """
         Generate samples from the model.
@@ -452,6 +450,7 @@ class GaussianDiffusion:
         :return: a non-differentiable batch of samples.
         """
         final = None
+        generation_list_of_dict = [] if save_timestep_output else None
         for sample in self.p_sample_loop_progressive(
             model,
             shape,
@@ -462,11 +461,14 @@ class GaussianDiffusion:
             model_kwargs=model_kwargs,
             device=device,
             progress=progress,
-            save_timestep_output=save_timestep_output,
-            class_labels=class_labels,
         ):
             final = sample
-        return final["sample"]
+            if save_timestep_output:
+                generation_list_of_dict.append({
+                    "timestep": sample["timestep"],
+                    "sample": sample["sample"].cpu().numpy().tolist()
+                })
+        return final["sample"], generation_list_of_dict
 
     def p_sample_loop_progressive(
         self,
@@ -479,8 +481,6 @@ class GaussianDiffusion:
         model_kwargs=None,
         device=None,
         progress=False,
-        save_timestep_output=False,
-        class_labels=None,
     ):
         """
         Generate samples from the model and yield intermediate samples from
@@ -489,7 +489,6 @@ class GaussianDiffusion:
         Returns a generator over dicts, where each dict is the return value of
         p_sample().
         """
-        save_timestep_output_list = []
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
@@ -517,25 +516,10 @@ class GaussianDiffusion:
                     clip_denoised=clip_denoised,
                     denoised_fn=denoised_fn,
                     cond_fn=cond_fn,
-                    model_kwargs=model_kwargs,
-                    save_timestep_output=save_timestep_output,
+                    model_kwargs=model_kwargs
                 )
+                out["timestep"] = i
                 yield out
-                if save_timestep_output:
-                    save_timestep_output_list.append(
-                        {
-                            "timestep": i,
-                            "sample": out["sample"].cpu().numpy().tolist(),
-                            "pred_xstart": out["pred_xstart"].cpu().numpy().tolist(),
-                        }
-                    )
-                img = out["sample"]
-        os.makedirs(f"debug_outputs_{class_labels}", exist_ok=True)
-        if save_timestep_output:
-            print("Saving timestep outputs to debug_outputs/timestep_output.json")
-            print("len of save_timestep_output_list:", len(save_timestep_output_list))
-            with open("debug_outputs/timestep_output.json", "w") as f:
-                json.dump(save_timestep_output_list, f)
 
     def ddim_sample(
         self,

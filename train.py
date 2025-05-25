@@ -246,6 +246,45 @@ def main(args):
             opt.step()
             update_ema(ema, model.module)
 
+            train_steps_dwt_eval_dict = {} 
+            """{'training step':[
+                                    {'class_label':[generation_steps]}, 
+                                    {'class_label':[generation_steps]} ... 
+                                ]
+                .....  
+            }
+            """
+            if train_steps % 20 == 0:
+                torch.manual_seed(0)
+                torch.set_grad_enabled(False)
+                class_list_in_training_eval = [278, 356, 82, 768]
+                i_train_steps_dict = {}  # this dict contains a dict for each class label, where the dict contains the generation steps for that class label { 'class_label': [generation_steps], ... }
+                num_timesteps_in_training_eval = 500
+                model.eval()  # important!
+                diffusion = create_diffusion(str(num_timesteps_in_training_eval))
+                # vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-{args.vae}").to(device)
+
+                for class_labels in class_list_in_training_eval:
+                    n = 1
+                    z = torch.randn(n, 4, latent_size, latent_size, device=device)
+                    y = torch.tensor([class_labels], device=device)
+
+                    # Setup classifier-free guidance:
+                    z = torch.cat([z, z], 0)
+                    y_null = torch.tensor([20] * n, device=device)
+                    y = torch.cat([y, y_null], 0)
+                    model_kwargs = dict(y=y, cfg_scale=4)
+
+                    # Sample images:
+                    samples, generation_list = diffusion.p_sample_loop(
+                        model, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True, device=device,
+                        save_timestep_output=True
+                    )
+                    i_train_steps_dict[class_labels[0]] = generation_list
+                    samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
+                    samples = vae.decode(samples / 0.18215).sample
+                train_steps_dwt_eval_dict[train_steps] = i_train_steps_dict
+
             # Log loss values:
             running_loss += loss.item()
             log_steps += 1
@@ -288,6 +327,19 @@ def main(args):
         json.dump(loss_list, f)
     with open(f"./results/time.json", "w") as f:
         json.dump(time_list, f)
+    with open(f"./results/train_steps_dwt_eval.json", "w") as f:
+        json.dump(train_steps_dwt_eval_dict, f, indent=4)
+
+    checkpoint = {
+                "model": model.module.state_dict(),
+                "ema": ema.state_dict(),
+                "opt": opt.state_dict(),
+                "args": args
+            }
+    checkpoint_path = f"{checkpoint_dir}/{train_steps:07d}.pt"
+    torch.save(checkpoint, checkpoint_path)
+    logger.info(f"Saved checkpoint to {checkpoint_path}")
+    print(f"Saved checkpoint to {checkpoint_path}")
 
     model.eval()  # important! This disables randomized embedding dropout
     # do any sampling/FID calculation/etc. with ema (or model) in eval mode ...
@@ -310,7 +362,7 @@ if __name__ == "__main__":
     parser.add_argument("--vae", type=str, choices=["ema", "mse"], default="ema")  # Choice doesn't affect training
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--log-every", type=int, default=100)
-    parser.add_argument("--ckpt-every", type=int, default=50_000)
+    parser.add_argument("--ckpt-every", type=int, default=5000)
     parser.add_argument("--token-mixer", type=str, default="linformer", choices=["linformer", "nystromformer", "performer", "softmax"])
     args = parser.parse_args()
     main(args)
