@@ -24,7 +24,7 @@ def main(args):
     # Setup PyTorch:
     # Load model:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     latent_size = args.image_size // 8
     model = DiT_models[args.model](
         input_size=latent_size,
@@ -53,7 +53,7 @@ def main(args):
             # Create sampling noise:
             n = 1 # number of class
             z = torch.randn(n, 4, latent_size, latent_size, device=device)
-            y = torch.tensor(class_label, device=device)
+            y = torch.tensor([class_label], device=device)
 
             # Setup classifier-free guidance:
             z = torch.cat([z, z], 0)
