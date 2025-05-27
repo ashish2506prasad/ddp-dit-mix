@@ -23,6 +23,8 @@ import json
 def main(args):
     # Setup PyTorch:
     # Load model:
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
     latent_size = args.image_size // 8
     model = DiT_models[args.model](
         input_size=latent_size,
@@ -47,7 +49,6 @@ def main(args):
         for seed in args.seed:
             torch.manual_seed(seed)
             torch.set_grad_enabled(False)
-            device = "cuda" if torch.cuda.is_available() else "cpu"
 
             # Create sampling noise:
             n = 1 # number of class
