@@ -71,11 +71,11 @@ def main(args):
             samples = vae.decode(samples / 0.18215).sample
 
             # Save and display images:
-            save_image(samples, f"class_{class_label}/sample_{args.class_labels}.png", nrow=4, normalize=True, value_range=(-1, 1))
+            save_image(samples, f"class_{class_label}/sample_{args.seed}.png", nrow=4, normalize=True, value_range=(-1, 1))
         # Save generation steps to a JSON file:
-        with open(f"class_{class_label}/generation_steps_{args.class_labels}.json", "w") as f:
+        with open(f"class_{class_label}/generation_steps.json", "w") as f:
             json.dump(seed_generation_list, f, indent=4)
-            print(f"Generation steps saved to generation_steps_{args.class_labels}.json")
+            print(f"Generation steps saved to generation_steps_{args.seed}.json")
 
 
 if __name__ == "__main__":
@@ -90,6 +90,6 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Optional path to a DiT checkpoint (default: auto-download a pre-trained DiT-XL/2 model).")
     parser.add_argument("--save-timestep-images",type=bool, default=False)
-    parser.add_argument("--class_labels", type=list, default=[207, 360, 387, 974])
+    parser.add_argument("--class_labels", type=list, default=[207, 360, 387, 974, 88, 979, 417, 279])
     args = parser.parse_args()
     main(args)
